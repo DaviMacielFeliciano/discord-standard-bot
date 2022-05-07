@@ -1,72 +1,89 @@
 const { Client, Collection } = require("discord.js");
 const { readdirSync } = require("fs");
 const config = require("./config/config.json");
-const Database = require("./database/index.js");
-const colors = require("colors");
+const connectToDatabase = require("./database/index.js");
+const Functions = require("./objects/functions.js");
 
-class Bot extends Client {
+
+class TicketSystemClient extends Client {
     constructor(options) {
         super(options)
         this.commands = new Collection();
         this.aliases = new Collection();
         this.database = new Collection();
         this.config = config;
+        this.database = [];
     }
 
-    login() {
-        return super.login(config.token);
+    start() {
+        this.login(this.config.token);
+        connectToDatabase.connect()
+        this.loadCommands();
+        this.loadEvents();
     }
 
-    loadCommand(commandPath, commandName) {
-        try {
-            const props = new (require(`${commandPath}${commandName}`))(this);
-            props.location = commandPath;
-            if (props.init) {
-                props.init(this);
+    loadCommands() {
+        let startedAt = performance.now();
+        let commandsCount = 0;
+        const commands = readdirSync("./src/commands/").filter(file => file.endsWith(".js"));
+        commands.forEach(command => {
+            try {
+                const props = new (require(`./commands/${command}`))(this);
+                props.location = `./commands/`;
+                if (props.init) {
+                    props.init(this);
+                }
+                this.commands.set(props.name, props);
+                props.aliases.forEach(aliase => {
+                    this.aliases.set(aliase, props.name);
+                });
+                commandsCount++;
+            } catch (error) {
+                console.log(error);
+                console.log(`\x1b[91m[Commands] Ocorreu um erro ao carregar o comando ${command} \x1b[0m`);
             }
-            this.commands.set(props.name, props);
-            props.aliases.forEach(aliase => {
-                this.aliases.set(aliase, props.name);
-            });
-        } catch (error) {
-            console.error(error);
-            console.log(colors.red(`[Commands] Ocorreu um erro ao inicializar o comando ${commandName}`));
-        }
+        })
+        let finishedAt = performance.now();
+        let time = (parseFloat(finishedAt - startedAt).toFixed(2)).replace(".00", "");
+        console.log(`\x1b[32m✔ [Commands] Foram carregados ${commandsCount} comandos em ${time}ms\x1b[0m`);
+    }
+
+    loadEvents() {
+        let startedAt = performance.now();
+        let eventsCount = 0;
+        const events = readdirSync(`./src/events/`).filter(file => file.endsWith('.js'));
+        events.forEach(async eventFile => {
+            try {
+                const event = new (require(`./events/${eventFile}`))(this);
+                this.on(event.eventName, (...args) => event.run(...args));
+                eventsCount++;
+            } catch (error) {
+                console.error(error);
+                console.log(`\x1b[91m[Events] Ocorreu um erro ao carregar o evento ${eventFile} \x1b[0m`);
+            }
+        });
+        let finishedAt = performance.now();
+        let time = (parseFloat(finishedAt - startedAt).toFixed(2)).replace(".00", "");
+        console.log(`\x1b[32m✔ [Events] Foram carregados ${eventsCount} eventos em ${time}ms\x1b[0m`);
     }
 }
 
-const client = new Bot({
+const TicketSystem = new TicketSystemClient({
     intents: 32767,
     partials: ["CHANNEL"]
-})
+});
 
-Database.connect();
+process.on('multipleResolves', (type, reason, promise) => {
+    console.log(`Foi detectado um erro, mais informações abaixo:\n\n` + type, promise, reason)
+});
+process.on('unhandRejection', (reason, promise) => {
+    console.log(`Foi detectado um erro, mais informações abaixo:\n\n` + reason, promise)
+});
+process.on('uncaughtException', (error, origin) => {
+    console.log(`Foi detectado um erro, mais informações abaixo:\n\n` + error, origin)
+});
+process.on('uncaughtExceptionMonitor', (error, origin) => {
+    console.log(`Foi detectado um erro, mais informações abaixo:\n\n` + error, origin)
+});
 
-async function loadCommands() {
-    const commands = readdirSync(`./src/commands/`).filter(file => file.endsWith('.js'));
-    commands.forEach(async commandFile => {
-        client.loadCommand(`./commands/`, `${commandFile}`);
-    });
-    if (client.commands.size > 0) { (client.commands.size !== 1) ? console.log(colors.green(`[Commands] Foram inicializados ${client.commands.size} comandos com sucesso!`)) : console.log(colors.green(`[Commands] Foi inicializado ${client.commands.size} comando com sucesso!`)) }
-}
-
-async function loadEvents() {
-    let x = 0;
-    const events = readdirSync(`./src/events/`).filter(file => file.endsWith('.js'));
-    events.forEach(async eventFile => {
-        const eventName = eventFile.substring(0, eventFile.length - 3);
-        try {
-            const event = new (require(`./events/${eventFile}`))(client);
-            client.on(eventName, (...args) => event.run(...args));
-            x++;
-        } catch (error) {
-            console.error(error);
-            console.log(colors.red(`[Events] Ocorreu um erro ao inicializar o evento ${eventName}.`));
-        }
-    });
-    if (x > 0) { (x !== 1) ? console.log(colors.green(`[Events] Foram inicializados ${x} eventos com sucesso!`)) : console.log(colors.green(`[Events] Foi inicializado ${x} evento com sucesso!`)) }
-}
-
-loadCommands();
-loadEvents();
-client.login();
+TicketSystem.start();

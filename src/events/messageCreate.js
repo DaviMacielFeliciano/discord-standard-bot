@@ -1,6 +1,7 @@
 module.exports = class {
     constructor(client) {
         this.client = client;
+        this.eventName = "messageCreate";
     }
 
     async run(message) {
@@ -14,13 +15,12 @@ module.exports = class {
                 let command;
 
                 if (message.mentions.has(this.client.user)) {
-                    args = message.content.slice(`<@!905200917534629949>`.length).trim().split(/ +/g);
+                    args = message.content.slice(`<@!929486579955826719>`.length).trim().split(/ +/g);
                     commandName = args.shift().toLowerCase();
                 } else if (message.content.startsWith(defaultPrefix)) {
                     args = message.content.slice(defaultPrefix.length).trim().split(/ +/g);
                     commandName = args.shift().toLowerCase();
                 }
-
 
                 command = this.client.commands.get(commandName) || this.client.commands.get(this.client.aliases.get(commandName))
                 if (command) {

@@ -1,4 +1,3 @@
-# Standard Bot (Base) 
+# discord-standard-bot
 
-Bot base para as criações de futuros e atuais bots
-caso queira usar, fique a vontade.
+Bot base para todos os projetos feitos, fique a vontade caso queira usa-lo.

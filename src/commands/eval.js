@@ -1,19 +1,15 @@
-const Command = require("../objects/Command");
+const { MessageEmbed } = require("discord.js")
 
-module.exports = class Eval extends Command {
+module.exports = class Eval {
     constructor(client) {
-        super(client);
         this.client = client;
-
         this.name = "eval";
-        this.description = "Executa um código especificado em JavaScript.";
-        this.category = "Desenvolvimento";
         this.aliases = [];
 
-        this.ownerOnly = false;
+        this.ownerOnly = true;
     }
 
-    async run({ message, args, prefix }) {
+    async run({ message, args }) {
 
         function clean(text) {
             if (typeof (text) === "string")
@@ -23,7 +19,7 @@ module.exports = class Eval extends Command {
         }
 
         if (!args[0]) {
-            message.reply({ content: `O uso correto do comando é &eval \`código\`.` })
+            message.reply({ content: `O uso correto do comando é **&eval (código)**.` })
             return;
         }
 
